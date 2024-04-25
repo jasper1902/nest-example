@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  nestexample:
+    image: nestexample
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: "JWT_SECRET"
+      DATABASE_URL: "mongodb://mongo:example@mongodb:27017/user?authSource=admin&directConnection=true&retryWrites=true&w=majority"
+    depends_on:
+      - mongodb
+
+  mongodb:
+    build: ./mongodb_rs
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_REPLICA_HOST: localhost
+      MONGO_REPLICA_PORT: 27017
+    ports: 
+      - '27017:27017'
+
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+    depends_on:
+      - nestexample
+    ports:
+      - 3000:3000
+
+volumes:
+  mongo-data:
+    driver: local
+
+
