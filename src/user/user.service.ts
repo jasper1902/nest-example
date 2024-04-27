@@ -1,10 +1,15 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { RegisterDto } from './dto/registerDto';
 import * as bcrypt from 'bcrypt';
 import { UserResponseDto } from './dto/userResponseDto';
 import { ErrorDto } from './dto/errorDto';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class UserService {
@@ -13,38 +18,47 @@ export class UserService {
     createUserDto: RegisterDto,
   ): Promise<{ user: UserResponseDto } | ErrorDto> {
     try {
-      const userAlreadyRegistered = await this.prisma.user.findFirst({
-        where: {
-          OR: [
-            { username: createUserDto.username },
-            { email: createUserDto.email },
-          ],
-        },
-      });
-
-      if (userAlreadyRegistered) {
-        return { message: 'User already registered' };
+      const sanitizedUsername = createUserDto.username.replace(/\s/g, '');
+      const sanitizedEmail = createUserDto.email.replace(/\s/g, '');
+      const sanitizedPassword = createUserDto.password.replace(/\s/g, '');
+      if (
+        sanitizedUsername !== createUserDto.username ||
+        sanitizedEmail !== createUserDto.email ||
+        sanitizedPassword !== createUserDto.password
+      ) {
+        throw new BadRequestException(
+          'Username, email, or password cannot contain spaces',
+        );
       }
 
-      const hashPassword = await bcrypt.hash(createUserDto.password, 12);
+      const hashPassword = await bcrypt.hash(sanitizedPassword, 12);
       const user = await this.prisma.user.create({
         data: {
-          username: createUserDto.username,
-          email: createUserDto.email,
+          username: sanitizedUsername,
+          email: sanitizedEmail,
           password: hashPassword,
         },
       });
 
       return { user: this.responseUser(user) };
     } catch (error) {
-      throw {
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Internal Server Error',
-      };
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new BadRequestException(['email or username taken']);
+        }
+      }
+
+      if (error.response.statusCode === 400) {
+        throw new BadRequestException([error.response.message]);
+      }
+
+      console.log(error)
+
+      throw new InternalServerErrorException(['Internal Server Error']);
     }
   }
 
-  responseUser(user: Prisma.UserCreateInput): UserResponseDto {
+  responseUser(user: Prisma.UserUncheckedCreateInput): UserResponseDto {
     return {
       id: user.id,
       username: user.username,
@@ -58,3 +72,4 @@ export class UserService {
     return this.prisma.user.findFirst({ where: { email: email } });
   }
 }
+
