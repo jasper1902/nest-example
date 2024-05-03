@@ -10,6 +10,8 @@ services:
       NODE_ENV: production
       JWT_SECRET: "JWT_SECRET"
       DATABASE_URL: "mongodb://mongo:example@mongodb:27017/user?authSource=admin&directConnection=true&retryWrites=true&w=majority"
+      GOOGLE_CLIENT_ID: 
+      GOOGLE_CLIENT_SECRET: 
     depends_on:
       - mongodb
 

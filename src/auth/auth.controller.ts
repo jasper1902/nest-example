@@ -1,6 +1,9 @@
-import { Controller, Post, Request, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Request, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
+import { GoogleAuthGuard } from './google-auth.guard';
+
+import { Response } from 'express';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -17,5 +20,21 @@ export class AuthController {
     return {
       message: 'Login successful',
     };
+  }
+
+  @UseGuards(GoogleAuthGuard)
+  @Get('google')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async googleAuth(@Request() req) {
+  }
+
+  @UseGuards(GoogleAuthGuard)
+  @Get('google/callback')
+  async googleAuthRedirect(@Request() req, @Res({passthrough: true}) res: Response) {
+    const { accessToken } = await this.authService.googleLogin(req);
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+    });
+    res.redirect('/user/profile');
   }
 }

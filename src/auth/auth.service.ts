@@ -32,4 +32,37 @@ export class AuthService {
     userDto.user.accessToken = accessToken;
     return userDto;
   }
+
+  async googleLogin(req): Promise<any> {
+    if (!req.user) {
+      throw new Error('Google login failed: No user information received.');
+    }
+
+    const { email, name, picture, googleId } = req.user;
+    const userAlreadyRegistered = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (userAlreadyRegistered) {
+      const payload = { email: userAlreadyRegistered.email };
+      return {
+        accessToken: this.jwtService.sign(payload),
+      };
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        username: name,
+        image: picture,
+        googleId,
+      },
+    });
+
+    const payload = { email: user.email };
+
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
+  }
 }
