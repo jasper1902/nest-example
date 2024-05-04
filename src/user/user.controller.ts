@@ -8,7 +8,8 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterDto } from './dto/registerDto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { AuthGuard } from '@nestjs/passport';
+// import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('user')
 export class UserController {
@@ -19,7 +20,7 @@ export class UserController {
     return this.userService.register(createUserDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard("jwt"))
   @Get('profile')
   async getProfile(@Request() req) {
     const user = await this.userService.findByEmail(req.user.email);
