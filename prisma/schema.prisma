@@ -2,6 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator markdown {
+  provider = "prisma-markdown"
+  output = "./ERD.md"
+  title = "Entity-Relationship Diagram" 
+}
+
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
